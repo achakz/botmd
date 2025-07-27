@@ -1,18 +1,23 @@
-// src/pages/History.jsx
 import React, { useEffect, useState } from "react";
-import { getMockHistory } from "../services/api";
+import { getUserHistory } from "../services/api"; // ✅ real call
+import { useAuth } from "../context/AuthContext"; // ✅ get token
 import { speak } from "../components/TTSPlayer";
 
 const History = () => {
   const [history, setHistory] = useState([]);
+  const { user } = useAuth(); // 🔐 access stored token
 
   useEffect(() => {
     const fetchData = async () => {
-      const data = await getMockHistory();
-      setHistory(data);
+      try {
+        const data = await getUserHistory(user.token);
+        setHistory(data);
+      } catch (err) {
+        console.error("Failed to fetch history:", err.message);
+      }
     };
-    fetchData();
-  }, []);
+    if (user) fetchData();
+  }, [user]);
 
   return (
     <div style={{ padding: "2rem" }}>
@@ -29,8 +34,8 @@ const History = () => {
               paddingBottom: "1rem",
             }}
           >
-            <p><strong>Date:</strong> {new Date(item.timestamp).toLocaleString()}</p>
-            <p><strong>Symptoms:</strong> {item.symptoms.join(", ")}</p>
+            <p><strong>Date:</strong> {new Date(item.createdAt).toLocaleString()}</p>
+            <p><strong>Symptoms:</strong> {item.symptoms}</p>
             <ul>
               {item.results.map((res, i) => (
                 <li key={i}>
@@ -43,7 +48,7 @@ const History = () => {
               ))}
             </ul>
             <button onClick={() => {
-              const spoken = `Based on symptoms like ${item.symptoms.join(", ")}, you may have ${item.results.map(r => r.disease).join(" or ")}`;
+              const spoken = `Based on symptoms like ${item.symptoms}, you may have ${item.results.map(r => r.disease).join(" or ")}`;
               speak(spoken);
             }}>
               🔊 Speak Diagnosis

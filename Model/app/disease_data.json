@@ -1,0 +1,5 @@
+{
+  "Flu": ["fever", "cough", "body ache", "fatigue"],
+  "Common Cold": ["sneezing", "cough", "runny nose", "congestion"],
+  "COVID-19": ["fever", "cough", "loss of taste", "fatigue", "shortness of breath"]
+}

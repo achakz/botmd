@@ -1,14 +1,10 @@
-// src/controllers/historyController.js
-
-// const { PrismaClient } = require("@prisma/client");
-// const prisma = new PrismaClient();
-const QueryHistory = require("../models/QueryHistory"); // Assuming you have a QueryHistory model
+const History = require("../models/QueryHistory");
 
 const getHistory = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const history = await QueryHistory.find({ userId }).sort({ createdAt: -1 });
+    const history = await History.find({ userId }).sort({ createdAt: -1 });
 
     res.json(history);
   } catch (err) {
