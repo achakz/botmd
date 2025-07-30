@@ -2,10 +2,14 @@
 import React, { useState } from "react";
 import MessageBubble from "./MessageBubble";
 import { speak } from "./TTSPlayer";
+import { useAuth } from "../context/AuthContext";
+import axios from "axios";
 
 const ChatBot = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+
+  const { user } = useAuth();
 
   const handleSend = async () => {
     if (!input.trim()) return;
@@ -13,15 +17,36 @@ const ChatBot = () => {
     const userMessage = { from: "user", text: input };
     setMessages((prev) => [...prev, userMessage]);
 
-    // Temporary mock bot response (will connect to backend later)
-    const botResponse = {
-      from: "bot",
-      text: `You might be experiencing Flu or Common Cold.`,
-    };
-    setMessages((prev) => [...prev, botResponse]);
+    try {
+      // Convert input into symptom array (simple split for now)
+      const symptoms = input.split(",").map(s => s.trim().toLowerCase());
 
-    // Text-to-Speech (optional at this point)
-    speak(botResponse.text);
+      const res = await axios.post(
+        "http://localhost:5000/api/predict",
+        { symptoms },
+        {
+          headers: {
+            Authorization: `Bearer ${user?.token}`,
+          },
+        }
+      );
+
+      const diseases = res.data.results;
+
+      const botText = diseases.map(d =>
+        `🦠 ${d.disease} (${(d.score * 100).toFixed(1)}%) - ${d.severity}`
+      ).join("\n");
+
+      const botMessage = { from: "bot", text: botText };
+
+      setMessages(prev => [...prev, botMessage]);
+
+      speak(`You may have ${diseases.map(d => d.disease).join(" or ")}`);
+
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || "Prediction failed";
+      setMessages(prev => [...prev, { from: "bot", text: `❌ ${errorMsg}` }]);
+    }
 
     setInput("");
   };

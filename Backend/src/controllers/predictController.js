@@ -1,3 +1,4 @@
+const axios = require("axios");
 const History = require("../models/QueryHistory");
 const redis = require("../utils/redisClient");
 
@@ -18,27 +19,11 @@ const predictDisease = async (req, res) => {
       console.log("Returning from Redis cache");
       return res.json(JSON.parse(cached));
     } else {
-      // Mocked result (replace later with AI service call)
-      results = [
-        {
-          disease: "Flu",
-          score: 0.76,
-          description: "A common viral infection causing fever and fatigue.",
-          severity: "Medium",
-        },
-        {
-          disease: "Common Cold",
-          score: 0.58,
-          description: "A mild viral respiratory illness.",
-          severity: "Low",
-        },
-        {
-          disease: "COVID-19",
-          score: 0.43,
-          description: "A potentially serious respiratory illness caused by coronavirus.",
-          severity: "High",
-        },
-      ];
+      const response = await axios.post("http://localhost:8000/predict", {
+        symptoms,
+      });
+
+      results = response.data.results;
 
       await redis.set(key, JSON.stringify({ results }), "EX", 3600);
       console.log("Cached new prediction result");
@@ -46,7 +31,7 @@ const predictDisease = async (req, res) => {
 
     // Save to MongoDB
     await History.create({
-      userId: req.user.id, // coming from authMiddleware
+      userId: req.user.id,
       symptoms,
       results,
     });
