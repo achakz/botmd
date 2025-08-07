@@ -21,3 +21,43 @@ export const getUserHistory = async (token) => {
   });
   return res.data;
 };
+
+export const createChatSession = async (token, title) => {
+  const res = await API.post(
+    "/chat-sessions",
+    { title },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  return res.data;
+};
+
+export const getUserChatSessions = async (token) => {
+  const res = await API.get("/chat-sessions", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return res.data;
+};
+
+export const addChatMessage = async (token, message) => {
+  const res = await API.post("/chat-messages", message, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return res.data;
+};
+
+export const getMessagesBySession = async (token, sessionId) => {
+  const res = await API.get(`/chat-messages/${sessionId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return res.data;
+};

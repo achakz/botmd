@@ -8,6 +8,8 @@ const connectDB = require("./utils/db");
 const authRoutes = require("./routes/authRoutes");
 const historyRoutes = require("./routes/historyRoutes");
 const predictRoutes = require("./routes/predictRoutes");
+const chatSessionRoutes = require("./routes/chatSessionRoutes");
+const chatMessageRoutes = require("./routes/chatMessageRoutes");
 
 dotenv.config();
 connectDB(); // Connect MongoDB before routes
@@ -21,6 +23,10 @@ app.use("/api/auth", authRoutes);
 app.use("/api/history", historyRoutes);
 
 app.use("/api/predict", predictRoutes);
+
+app.use("/api/chat-sessions", chatSessionRoutes);
+
+app.use("/api/chat-messages", chatMessageRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

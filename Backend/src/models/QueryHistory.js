@@ -1,3 +1,4 @@
+//src/models/QueryHistory.js
 const mongoose = require("mongoose");
 
 const queryHistorySchema = new mongoose.Schema({

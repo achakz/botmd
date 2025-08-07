@@ -1,3 +1,4 @@
+//src/components/MessageBubble.jsx
 import React from "react";
 
 const MessageBubble = ({ from, text }) => {
