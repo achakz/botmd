@@ -1,5 +1,4 @@
-// src/index.js
-
+//src/index.js
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
@@ -12,21 +11,21 @@ const chatSessionRoutes = require("./routes/chatSessionRoutes");
 const chatMessageRoutes = require("./routes/chatMessageRoutes");
 
 dotenv.config();
-connectDB(); // Connect MongoDB before routes
+connectDB();
 
 const app = express();
-app.use(cors());
+// Enable CORS for the frontend origin
+app.use(cors({
+  origin: "http://localhost:5173", // Adjust if your frontend port differs
+  credentials: true,
+}));
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);
-
 app.use("/api/history", historyRoutes);
-
-app.use("/api/predict", predictRoutes);
-
 app.use("/api/chat-sessions", chatSessionRoutes);
-
 app.use("/api/chat-messages", chatMessageRoutes);
+app.use("/api/chat", predictRoutes);
 
 const PORT = process.env.PORT || 5000;
 

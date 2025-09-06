@@ -1,15 +1,15 @@
 //src/pages/History.jsx
 
 import React, { useEffect, useState } from "react";
-import { getUserHistory } from "../services/api"; // ✅ real call
-import { useAuth } from "../context/AuthContext"; // ✅ get token
+import { getUserHistory } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 import { speak } from "../components/TTSPlayer";
 import { useNavigate } from "react-router-dom";
 
 const History = () => {
   const [history, setHistory] = useState([]);
-  const { user } = useAuth(); //access stored token
-  const navigate = useNavigate(); // 👈 Hook for navigation
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -25,7 +25,6 @@ const History = () => {
 
   return (
     <div style={{ padding: "2rem" }}>
-      {/* 👇 New Button */}
       <button onClick={() => navigate("/chat")} style={{ marginBottom: "1rem" }}>
         🔙 Back to Chat
       </button>
@@ -37,22 +36,24 @@ const History = () => {
         history.map((item, idx) => (
           <div key={idx} style={{ marginBottom: "1.5rem", borderBottom: "1px solid #ccc", paddingBottom: "1rem" }}>
             <p><strong>Date:</strong> {new Date(item.createdAt).toLocaleString()}</p>
-            <p><strong>Symptoms:</strong> {item.symptoms}</p>
+            <p><strong>Message:</strong> {item.message}</p>
+            <p><strong>Extracted Symptoms:</strong> {item.extracted_symptoms.join(", ")}</p>
             <ul>
-              {item.results.map((res, i) => (
+              {item.structured_prediction.map((res, i) => (
                 <li key={i}>
                   <p>
                     🦠 <strong>{res.disease}</strong> — Confidence: {(res.score * 100).toFixed(1)}% <br />
-                    📝 {res.description} <br />
-                    ⚠️ Severity: <strong>{res.severity}</strong>
                   </p>
                 </li>
               ))}
             </ul>
-            <button onClick={() => {
-              const spoken = `Based on symptoms like ${item.symptoms}, you may have ${item.results.map(r => r.disease).join(" or ")}`;
-              speak(spoken);
-            }}>
+            <p><strong>Humanized Response:</strong> {item.humanized_response}</p>
+            <button
+              onClick={() => {
+                const spoken = `Based on your message ${item.message}, you may have ${item.structured_prediction.map((r) => r.disease).join(" or ")}`;
+                speak(spoken);
+              }}
+            >
               🔊 Speak Diagnosis
             </button>
           </div>

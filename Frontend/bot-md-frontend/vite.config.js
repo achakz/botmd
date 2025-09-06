@@ -8,4 +8,13 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
   },
+  optimizeDeps: {
+    include: ['@emotion/react', '@emotion/styled', 'react', 'react-dom'],
+    exclude: ['@rollup/rollup-win32-x64-msvc'], // Exclude problematic native module
+  },
+  resolve: {
+    alias: {
+      '@emotion/styled': '@emotion/styled',
+    },
+  },
 });

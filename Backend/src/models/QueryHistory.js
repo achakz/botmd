@@ -7,19 +7,25 @@ const queryHistorySchema = new mongoose.Schema({
     ref: "User",
     required: true,
   },
-  symptoms: {
+  message: {
+    type: String,
+    required: true,
+  },
+  extracted_symptoms: {
     type: [String],
     required: true,
   },
-  results: {
+  structured_prediction: {
     type: [
       {
-        disease: String,
-        score: Number,
-        description: String,
-        severity: String,
+        disease: { type: String, required: true },
+        score: { type: Number, required: true },
       },
     ],
+    required: true,
+  },
+  humanized_response: {
+    type: String,
     required: true,
   },
   createdAt: {

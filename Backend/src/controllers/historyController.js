@@ -1,3 +1,4 @@
+//src/controllers/historyController.js
 const History = require("../models/QueryHistory");
 
 const getHistory = async (req, res) => {

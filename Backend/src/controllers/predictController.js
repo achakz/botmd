@@ -1,43 +1,48 @@
 //src/controllers/predictController.js
 const axios = require("axios");
 const History = require("../models/QueryHistory");
-const redis = require("../utils/redisClient");
 
 const predictDisease = async (req, res) => {
-  const { symptoms } = req.body;
+  const { message, mode } = req.body;
 
-  if (!symptoms || !Array.isArray(symptoms)) {
-    return res.status(400).json({ error: "Invalid symptoms input" });
+  if (!message || typeof message !== "string") {
+    return res.status(400).json({ error: "Invalid message input" });
+  }
+  if (!mode || !["predict", "chat"].includes(mode)) {
+    return res.status(400).json({ error: "Invalid mode; use 'predict' or 'chat'" });
   }
 
-  const key = symptoms.map(s => s.toLowerCase().trim()).sort().join(",");
-
   try {
-    const cached = await redis.get(key);
-    let results;
-
-    if (cached) {
-      console.log("Returning from Redis cache");
-      return res.json(JSON.parse(cached));
-    } else {
-      const response = await axios.post("http://localhost:8000/predict", {
-        symptoms,
-      });
-
-      results = response.data.results;
-
-      await redis.set(key, JSON.stringify({ results }), "EX", 3600);
-      console.log("Cached new prediction result");
-    }
-
-    // Save to MongoDB
-    await History.create({
-      userId: req.user.id,
-      symptoms,
-      results,
+    const response = await axios.post("http://localhost:8000/chat", {
+      mode,
+      text: message,
     });
 
-    res.json({ results });
+    const prediction = response.data;
+
+    // Save to QueryHistory only for predict mode
+    if (mode === "predict") {
+      await History.create({
+        userId: req.user.id,
+        message,
+        extracted_symptoms: prediction.extracted_symptoms,
+        structured_prediction: prediction.structured_prediction,
+        humanized_response: prediction.humanized_response,
+      });
+    }
+
+    // Return the appropriate response based on mode
+    if (mode === "predict") {
+      res.json({
+        humanized_response: prediction.humanized_response,
+        structured_prediction: prediction.structured_prediction,
+        extracted_symptoms: prediction.extracted_symptoms,
+      });
+    } else if (mode === "chat") {
+      res.json({
+        chat_response: prediction.chat_response,
+      });
+    }
   } catch (err) {
     console.error("Prediction error:", err.message);
     res.status(500).json({ error: "Prediction failed" });

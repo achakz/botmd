@@ -1,8 +1,19 @@
+# main.py
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from app.predict import get_prediction
 from app.llm_handler import get_chat_response_with_llm
 
 app = FastAPI()
+
+# Enable CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:5000"],  # Adjust if your frontend runs on a different port
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all methods including OPTIONS
+    allow_headers=["*"],
+)
 
 @app.post("/chat")
 async def handle_chat(request: Request):
