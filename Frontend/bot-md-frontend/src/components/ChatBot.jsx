@@ -4,6 +4,7 @@ import {
   ListItemButton, ListItemIcon, ListItemText, TextField, IconButton,
   Select, MenuItem, FormControl, Divider, Paper
 } from "@mui/material";
+import { ThemeProvider, createTheme } from '@mui/material/styles';
 import {
   AddCircleOutline, History, Send, VolumeUp, VolumeOff, ChatBubbleOutline
 } from "@mui/icons-material";
@@ -21,42 +22,54 @@ import axios from "axios";
 
 const drawerWidth = 280;
 
+const darkTheme = createTheme({
+  palette: {
+    mode: 'dark',
+    background: {
+      default: '#0d1117',
+      paper: '#161b22',
+    },
+    primary: {
+      main: '#2f81f7',
+    },
+    text: {
+      primary: '#c9d1d9',
+      secondary: '#8b949e',
+    },
+  },
+  typography: {
+    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    h6: {
+      fontWeight: 600,
+    },
+    body1: {
+      fontWeight: 500,
+    }
+  },
+});
+
 const TypingIndicator = () => (
   <Box sx={{ display: 'flex', alignItems: 'center', p: 1.5 }}>
     <Box sx={{
-      height: 8,
-      width: 8,
-      backgroundColor: 'grey.500',
-      borderRadius: '50%',
-      display: 'inline-block',
+      height: 8, width: 8, backgroundColor: 'grey.600', borderRadius: '50%',
       animation: 'wave 1.3s linear infinite',
       '&:nth-of-type(2)': { animationDelay: '-1.1s' },
       '&:nth-of-type(3)': { animationDelay: '-0.9s' },
       '@keyframes wave': { '0%, 60%, 100%': { transform: 'initial' }, '30%': { transform: 'translateY(-8px)' } }
     }} />
     <Box sx={{
-      height: 8,
-      width: 8,
-      backgroundColor: 'grey.500',
-      borderRadius: '50%',
-      display: 'inline-block',
+      height: 8, width: 8, backgroundColor: 'grey.600', borderRadius: '50%', ml: 0.5,
       animation: 'wave 1.3s linear infinite',
       '&:nth-of-type(2)': { animationDelay: '-1.1s' },
       '&:nth-of-type(3)': { animationDelay: '-0.9s' },
-      '@keyframes wave': { '0%, 60%, 100%': { transform: 'initial' }, '30%': { transform: 'translateY(-8px)' } },
-      ml: 0.5
+      '@keyframes wave': { '0%, 60%, 100%': { transform: 'initial' }, '30%': { transform: 'translateY(-8px)' } }
     }} />
     <Box sx={{
-      height: 8,
-      width: 8,
-      backgroundColor: 'grey.500',
-      borderRadius: '50%',
-      display: 'inline-block',
+      height: 8, width: 8, backgroundColor: 'grey.600', borderRadius: '50%', ml: 0.5,
       animation: 'wave 1.3s linear infinite',
       '&:nth-of-type(2)': { animationDelay: '-1.1s' },
       '&:nth-of-type(3)': { animationDelay: '-0.9s' },
-      '@keyframes wave': { '0%, 60%, 100%': { transform: 'initial' }, '30%': { transform: 'translateY(-8px)' } },
-      ml: 0.5
+      '@keyframes wave': { '0%, 60%, 100%': { transform: 'initial' }, '30%': { transform: 'translateY(-8px)' } }
     }} />
   </Box>
 );
@@ -84,8 +97,8 @@ const ChatBot = () => {
 
 
   useEffect(() => {
+    if (!user?.token) return;
     const init = async () => {
-      if (!user?.token) return;
       try {
         const sessions = await getUserChatSessions(user.token);
         setChatSessions(sessions);
@@ -111,20 +124,17 @@ const ChatBot = () => {
 
   const handleSend = async () => {
     if (!input.trim() || !sessionId) return;
-
     const userMessage = { sender: "user", content: input, mode };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     await addChatMessage(user.token, { ...userMessage, sessionId });
     setLoading(true);
-
     try {
       const res = await axios.post(
         "http://localhost:5000/api/chat",
         { message: input, mode },
         { headers: { Authorization: `Bearer ${user.token}` } }
       );
-
       let botContent;
       if (mode === "predict") {
         botContent = res.data.humanized_response;
@@ -133,7 +143,6 @@ const ChatBot = () => {
         botContent = res.data.chat_response;
         if (ttsEnabled) speak(res.data.chat_response);
       }
-
       const botMessage = { sender: "bot", content: botContent, mode };
       setMessages((prev) => [...prev, botMessage]);
       await addChatMessage(user.token, { ...botMessage, sessionId });
@@ -166,124 +175,122 @@ const ChatBot = () => {
   };
 
   const drawerContent = (
-    <div>
-      <Toolbar />
-      <Box sx={{ p: 2 }}>
-        <ListItemButton onClick={handleNewChat}>
-          <ListItemIcon>
-            <AddCircleOutline />
-          </ListItemIcon>
+    <Box sx={{ backgroundColor: '#0d1117', height: '100%'}}>
+      <Toolbar sx={{ display: 'flex', justifyContent: 'center', p: 2, mb: 1 }}>
+        <Typography sx={{ fontFamily: '"Oswald", "sans-serif"', fontWeight: 600, fontSize: '2.25rem' }}>
+          BotMD
+        </Typography>
+      </Toolbar>
+      <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.12)' }}/>
+      <Box sx={{ p: 1 }}>
+        <ListItemButton onClick={handleNewChat} sx={{ borderRadius: '8px', m:1 }}>
+          <ListItemIcon><AddCircleOutline /></ListItemIcon>
           <ListItemText primary="New Chat" />
         </ListItemButton>
-        <ListItemButton onClick={() => navigate("/history")}>
-          <ListItemIcon>
-            <History />
-          </ListItemIcon>
+        <ListItemButton onClick={() => navigate("/history")} sx={{ borderRadius: '8px', m:1 }}>
+          <ListItemIcon><History /></ListItemIcon>
           <ListItemText primary="View History" />
         </ListItemButton>
       </Box>
-      <Divider />
-      <List>
+      <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.12)' }} />
+      <List sx={{ p: 1 }}>
         {chatSessions.map((session) => (
           <ListItem key={session._id} disablePadding>
             <ListItemButton
               selected={sessionId === session._id}
               onClick={() => handleSessionClick(session._id)}
+              sx={{ borderRadius: '8px', mb: 0.5 }}
             >
-              <ListItemIcon>
-                <ChatBubbleOutline />
-              </ListItemIcon>
+              <ListItemIcon><ChatBubbleOutline fontSize="small"/></ListItemIcon>
               <ListItemText
                 primary={session.title}
+                primaryTypographyProps={{ fontWeight: 500, noWrap: true }}
                 secondary={new Date(session.createdAt).toLocaleDateString()}
               />
             </ListItemButton>
           </ListItem>
         ))}
       </List>
-    </div>
+    </Box>
   );
 
   return (
-    <Box sx={{ display: 'flex' }}>
-      <CssBaseline />
-      <AppBar
-        position="fixed"
-        sx={{ width: `calc(100% - ${drawerWidth}px)`, ml: `${drawerWidth}px` }}
-      >
-        <Toolbar>
-          <Typography variant="h6" noWrap component="div">
-            BotMD
-          </Typography>
-        </Toolbar>
-      </AppBar>
-      <Drawer
-        sx={{
-          width: drawerWidth,
-          flexShrink: 0,
-          '& .MuiDrawer-paper': {
-            width: drawerWidth,
-            boxSizing: 'border-box',
-          },
-        }}
-        variant="permanent"
-        anchor="left"
-      >
-        {drawerContent}
-      </Drawer>
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          bgcolor: 'background.default',
-          p: 3,
-          height: '100vh',
-          display: 'flex',
-          flexDirection: 'column'
-        }}
-      >
-        <Toolbar />
-        <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 2 }}>
-          {messages.map((msg, i) => (
-            <MessageBubble key={i} from={msg.sender} text={msg.content} />
-          ))}
-          {loading && <MessageBubble from="bot" text={<TypingIndicator />} />}
-          <div ref={messagesEndRef} />
-        </Box>
-        <Paper
-          elevation={3}
-          sx={{ p: 1, display: 'flex', alignItems: 'center', mt: 1 }}
+    <ThemeProvider theme={darkTheme}>
+      <Box sx={{ display: 'flex' }}>
+        <CssBaseline />
+        <AppBar
+          position="fixed"
+          elevation={0}
+          sx={{ 
+            width: `calc(100% - ${drawerWidth}px)`, 
+            ml: `${drawerWidth}px`,
+            background: 'linear-gradient(90deg, #161b22 0%, #0d1117 100%)',
+            borderBottom: '1px solid',
+            borderColor: 'rgba(255, 255, 255, 0.12)',
+          }}
         >
-          <FormControl sx={{ m: 1, minWidth: 120 }}>
-            <Select
-              value={mode}
-              onChange={(e) => setMode(e.target.value)}
-              size="small"
-            >
-              <MenuItem value="predict">Prediction</MenuItem>
-              <MenuItem value="chat">Chat</MenuItem>
-            </Select>
-          </FormControl>
-          <TextField
-            fullWidth
-            variant="outlined"
-            placeholder="Enter your symptoms or message..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            disabled={loading}
-            multiline
-            maxRows={4}
-          />
-          <IconButton onClick={() => setTTSEnabled((prev) => !prev)}>
-            {ttsEnabled ? <VolumeUp /> : <VolumeOff />}
-          </IconButton>
-          <IconButton onClick={handleSend} disabled={loading || !input.trim()} color="primary">
-            <Send />
-          </IconButton>
-        </Paper>
+          <Toolbar>
+            <Typography variant="h6" noWrap component="div">
+              Chat Session
+            </Typography>
+          </Toolbar>
+        </AppBar>
+        <Drawer
+          sx={{
+            width: drawerWidth, flexShrink: 0,
+            '& .MuiDrawer-paper': { width: drawerWidth, boxSizing: 'border-box', borderRight: '1px solid rgba(255, 255, 255, 0.12)' },
+          }}
+          variant="permanent" anchor="left"
+        >
+          {drawerContent}
+        </Drawer>
+        <Box
+          component="main"
+          sx={{ flexGrow: 1, p: 3, height: '100vh', display: 'flex', flexDirection: 'column' }}
+        >
+          <Toolbar />
+          <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 2 }}>
+            {messages.map((msg, i) => (
+              <MessageBubble key={i} from={msg.sender} text={msg.content} />
+            ))}
+            {loading && <MessageBubble from="bot" text={<TypingIndicator />} />}
+            <div ref={messagesEndRef} />
+          </Box>
+          <Paper
+            elevation={0}
+            sx={{ 
+              p: 1, display: 'flex', alignItems: 'center', mt: 1,
+              backgroundColor: '#161b22',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              borderRadius: '12px'
+            }}
+          >
+            <FormControl sx={{ m: 1, minWidth: 120 }}>
+              <Select value={mode} onChange={(e) => setMode(e.target.value)} size="small">
+                <MenuItem value="predict">Prediction</MenuItem>
+                <MenuItem value="chat">Chat</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              fullWidth variant="outlined"
+              placeholder="Enter your symptoms or message..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+              disabled={loading}
+              multiline maxRows={4}
+              sx={{ "& .MuiOutlinedInput-root": { borderRadius: '10px' } }}
+            />
+            <IconButton onClick={() => setTTSEnabled((prev) => !prev)}>
+              {ttsEnabled ? <VolumeUp /> : <VolumeOff />}
+            </IconButton>
+            <IconButton onClick={handleSend} disabled={loading || !input.trim()} color="primary">
+              <Send />
+            </IconButton>
+          </Paper>
+        </Box>
       </Box>
-    </Box>
+    </ThemeProvider>
   );
 };
 
