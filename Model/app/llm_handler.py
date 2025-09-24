@@ -1,4 +1,4 @@
-# app/llm_handler.py
+#app/llm_handler.py
 import json
 import requests
 
@@ -22,10 +22,10 @@ def _stream_llm_response(prompt):
         print(f"Error communicating with or parsing response from LLM: {e}")
         return None
 
-def extract_symptoms_with_llm(text: str, unique_symptoms: list):
-    symptoms_list_str = ", ".join(unique_symptoms)
+def extract_symptoms_with_llm(text: str, symptom_list: list):  # Renamed param to symptom_list
+    symptoms_list_str = ", ".join(symptom_list)  # Use the passed list
     prompt = f"""
-    SYSTEM: You are a symptom extraction engine. Your ONLY task is to identify medical symptoms EXACTLY as described in the user's text and map them to the closest matching terms from this standardized list: {symptoms_list_str}. Use ONLY terms that appear verbatim in the list and are DIRECTLY supported by the user's input. Do NOT infer, add, or invent symptoms not explicitly mentioned (e.g., if 'red spots' is said, use 'skin_rash' or 'red_spots_over_body' only if it matches, but do NOT add 'redness_of_eyes' unless stated). Return ONLY a JSON object with a single key 'symptoms' containing a list of matched strings. If no matches, return {{"symptoms": []}}.
+    SYSTEM: You are a symptom extraction engine. Your ONLY task is to identify medical symptoms EXACTLY as described in the user's text and map them to the closest matching terms from this standardized list: {symptoms_list_str}. Use ONLY terms that appear verbatim in the list and are DIRECTLY supported by the user's input. Do NOT infer, add, or invent symptoms not explicitly mentioned (e.g., if 'red spots' is said, use 'skin rash' or 'red spots over body' only if it matches, but do NOT add 'redness of eyes' unless stated). Return ONLY a JSON object with a single key 'symptoms' containing a list of matched strings. If no matches, return {{"symptoms": []}}.
     USER: {text}
     ASSISTANT:
     """
@@ -37,18 +37,9 @@ def extract_symptoms_with_llm(text: str, unique_symptoms: list):
 
     # Primary check: Expected format
     if "symptoms" in response_data and isinstance(response_data["symptoms"], list):
-        return [s for s in response_data["symptoms"] if s in unique_symptoms]
-
-    # Fallback: Handle dialogue_action/slots_filled format, but only exact matches
-    try:
-        if "dialogue_action" in response_data and "slots_filled" in response_data["dialogue_action"]:
-            slots = response_data["dialogue_action"]["slots_filled"]
-            if "symptoms" in slots and isinstance(slots["symptoms"], list):
-                symptom_values = [item.get("value", item.get("text", "")).lower() for item in slots["symptoms"]]
-                # Only keep symptoms that are verbatim in unique_symptoms and match input context
-                return [s for s in unique_symptoms if any(sym in text.lower() for sym in s.split("_"))]
-    except (TypeError, KeyError):
-        pass
+        # Normalize and filter (handle underscores/spaces/case)
+        normalized_list = [s.lower().replace('_', ' ') for s in symptom_list]
+        return [symptom_list[normalized_list.index(s.lower().replace('_', ' '))] for s in response_data["symptoms"] if s.lower().replace('_', ' ') in normalized_list]  # Return original casing from list
 
     print(f"LLM returned unexpected format that could not be parsed: {response_data}")
     return []
@@ -71,7 +62,6 @@ ASSISTANT: Provide an empathetic, human-like paragraph. Start by acknowledging t
     return response_data.get("humanized_response", "Could not generate a response.")
 
 def get_chat_response_with_llm(text: str):
-    # [Existing code unchanged]
     prompt = f"""
     You are a helpful medical assistant. Answer the following question in a clear and concise way. Always include a disclaimer to consult a healthcare professional for medical advice.
     Question: "{text}"
