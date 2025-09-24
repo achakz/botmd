@@ -20,3 +20,14 @@
   display: flex;
   gap: 10px;
 }
+
+body {
+  /* This removes the default spacing around the page */
+  margin: 0;
+  
+  /* This sets the background color for the entire page to match your theme */
+  background-color: #111827;
+
+  /* You can also move the font-family here for consistency */
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+}

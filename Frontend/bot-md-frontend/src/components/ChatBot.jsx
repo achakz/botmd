@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   CssBaseline, Box, AppBar, Toolbar, Typography, Drawer, List, ListItem,
   ListItemButton, ListItemIcon, ListItemText, TextField, IconButton,
-  Select, MenuItem, FormControl, Divider, Paper
+  Select, MenuItem, FormControl, Divider, Paper, Link
 } from "@mui/material";
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import {
@@ -11,7 +11,7 @@ import {
 import MessageBubble from "./MessageBubble";
 import { speak } from "./TTSPlayer";
 import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link as RouterLink } from "react-router-dom";
 import {
   createChatSession,
   getUserChatSessions,
@@ -21,6 +21,14 @@ import {
 import axios from "axios";
 
 const drawerWidth = 280;
+
+const BotMDLogo = () => (
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2L2 7V17L12 22L22 17V7L12 2Z" stroke="#38BDF8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M2 7L12 12L22 7" stroke="#38BDF8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M12 12V22" stroke="#38BDF8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+);
 
 const darkTheme = createTheme({
   palette: {
@@ -177,9 +185,12 @@ const ChatBot = () => {
   const drawerContent = (
     <Box sx={{ backgroundColor: '#0d1117', height: '100%'}}>
       <Toolbar sx={{ display: 'flex', justifyContent: 'center', p: 2, mb: 1 }}>
-        <Typography sx={{ fontFamily: '"Oswald", "sans-serif"', fontWeight: 600, fontSize: '2.25rem' }}>
-          BotMD
-        </Typography>
+        <BotMDLogo />
+        <Link component={RouterLink} to="/" sx={{ textDecoration: 'none', color: 'inherit' }}>
+          <Typography sx={{ fontFamily: '"Oswald", "sans-serif"', fontWeight: 600, fontSize: '2.25rem' }}>
+            &nbsp;BotMD
+          </Typography>
+        </Link>
       </Toolbar>
       <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.12)' }}/>
       <Box sx={{ p: 1 }}>
