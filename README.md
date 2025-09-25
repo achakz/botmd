@@ -38,7 +38,7 @@ BotMD is an **AI-powered chatbot** that supports two modes:
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: React.js (Vite, Context API, TailwindCSS)
+- **Frontend**: React.js (Vite, Material UI)
     
 - **Backend (Core API)**: Express.js, MongoDB, JWT Authentication
     
