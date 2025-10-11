@@ -10,10 +10,6 @@ __pycache__/
 # Test cache
 .pytest_cache/
 
-# Virtual environment (optional but recommended)
-venv/
-.env/
-
 # VS Code & IDE files
 .vscode/
 .idea/
