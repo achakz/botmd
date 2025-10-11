@@ -26,6 +26,7 @@ import { deleteChatSession } from "../services/api";
 
 
 const drawerWidth = 280;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const BotMDLogo = () => (
   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -165,7 +166,7 @@ const ChatBot = () => {
     setLoading(true);
     try {
       const res = await axios.post(
-        "http://localhost:5000/api/chat",
+        `${API_BASE_URL}/api/chat`,
         { message: input, mode },
         { headers: { Authorization: `Bearer ${user.token}` } }
       );
