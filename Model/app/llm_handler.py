@@ -1,71 +1,136 @@
-#app/llm_handler.py
 import json
-import requests
+import os
+import re
+import google.generativeai as genai
+from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
-OLLAMA_ENDPOINT = "http://localhost:11434/api/generate"
-LLM_MODEL = "llama3.1"
+# Configure Gemini with API key
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+
+# --- START: NEW SAFETY SETTINGS ---
+safety_settings = {
+    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+}
+# --- END: NEW SAFETY SETTINGS ---
+
+model = genai.GenerativeModel(
+    model_name="gemini-2.0-flash-lite",
+    safety_settings=safety_settings
+)
+
+
+# ✅ Utility to clean unwanted markdown symbols
+def sanitize_text(text: str) -> str:
+    if not text:
+        return text
+    text = re.sub(r"[*_`#>\[\]()~]", "", text)  # remove markdown symbols
+    text = re.sub(r"\s{2,}", " ", text)          # normalize extra spaces
+    return text.strip()
+
 
 def _stream_llm_response(prompt):
-    payload = {
-        "model": LLM_MODEL,
-        "prompt": prompt,
-        "stream": False,
-        "format": "json"
-    }
     try:
-        response = requests.post(OLLAMA_ENDPOINT, json=payload, timeout=60)
-        response.raise_for_status()
-        response_json_str = response.json().get("response", "{}")
-        print(f"DEBUG: Raw LLM response: {response_json_str}")  # Debugging
-        return json.loads(response_json_str)
-    except (requests.RequestException, json.JSONDecodeError) as e:
-        print(f"Error communicating with or parsing response from LLM: {e}")
+        response = model.generate_content(prompt)
+
+        if not response.parts:
+            print(f"Gemini response was blocked or empty. Feedback: {response.prompt_feedback}")
+            return None
+
+        response_text = response.text.strip()
+
+        # --- Handle cases like ```json ... ``` or plain JSON + extra text ---
+        # Extract JSON-like substring safely
+        json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+        if not json_match:
+            print(f"⚠️ No JSON object detected in Gemini response:\n{response_text}")
+            return None
+
+        clean_json = json_match.group(0).strip()
+
+        # Try parsing
+        try:
+            return json.loads(clean_json)
+        except json.JSONDecodeError as je:
+            print(f"⚠️ JSON decoding failed even after cleanup: {je}")
+            print(f"Raw Gemini Response Text:\n{response_text}")
+            return None
+
+    except Exception as e:
+        print(f"❌ Error generating or parsing response from Gemini: {e}")
+        print(f"Raw Gemini Response Text: {response.text if 'response' in locals() else 'N/A'}")
         return None
 
-def extract_symptoms_with_llm(text: str, symptom_list: list):  # Renamed param to symptom_list
-    symptoms_list_str = ", ".join(symptom_list)  # Use the passed list
+
+def extract_symptoms_with_llm(text: str, symptom_list: list):
+    symptoms_list_str = ", ".join([f'"{s}"' for s in symptom_list])
     prompt = f"""
-    SYSTEM: You are a symptom extraction engine. Your ONLY task is to identify medical symptoms EXACTLY as described in the user's text and map them to the closest matching terms from this standardized list: {symptoms_list_str}. Use ONLY terms that appear verbatim in the list and are DIRECTLY supported by the user's input. Do NOT infer, add, or invent symptoms not explicitly mentioned (e.g., if 'red spots' is said, use 'skin rash' or 'red spots over body' only if it matches, but do NOT add 'redness of eyes' unless stated). Return ONLY a JSON object with a single key 'symptoms' containing a list of matched strings. If no matches, return {{"symptoms": []}}.
-    USER: {text}
-    ASSISTANT:
+    Analyze the user's text and identify symptoms. Your task is to map the described symptoms
+    to the closest matching terms from this exact list: [{symptoms_list_str}].
+    Do NOT use markdown symbols like *, #, or backticks in your response.
+    Return ONLY a JSON object with a single key "symptoms" which contains a list of the matched strings.
+    If the user says "I am not hungry", you must map it to "loss_of_appetite".
+    If no relevant symptoms are found, return {{"symptoms": []}}.
+
+    User Text: "{text}"
     """
     response_data = _stream_llm_response(prompt)
+    if response_data and isinstance(response_data, dict) and "symptoms" in response_data:
+        return response_data.get("symptoms", [])
 
-    if not response_data or not isinstance(response_data, dict):
-        print(f"LLM returned invalid format: {response_data}")
-        return []
-
-    # Primary check: Expected format
-    if "symptoms" in response_data and isinstance(response_data["symptoms"], list):
-        # Normalize and filter (handle underscores/spaces/case)
-        normalized_list = [s.lower().replace('_', ' ') for s in symptom_list]
-        return [symptom_list[normalized_list.index(s.lower().replace('_', ' '))] for s in response_data["symptoms"] if s.lower().replace('_', ' ') in normalized_list]  # Return original casing from list
-
-    print(f"LLM returned unexpected format that could not be parsed: {response_data}")
+    print(f"LLM returned an unexpected or empty format: {response_data}")
     return []
 
+
 def humanize_prediction_with_llm(prediction_data: list, extracted_symptoms: list):
-    predictions_str = "; ".join([f"{pred['disease']} ({int(pred['score'] * 100)}% confidence)" for pred in prediction_data])
+    predictions_str = "; ".join(
+        [f"{pred['disease']} ({int(pred['score'] * 100)}% confidence)" for pred in prediction_data]
+    )
     symptoms_str = ", ".join(extracted_symptoms)
 
     prompt = f"""
-    SYSTEM: You are a medical assistant tasked with generating a humanized response. You MUST return a JSON object with a single key "humanized_response" containing a string. No other keys or formats are allowed.
-USER: The user described symptoms: {symptoms_str}. The prediction model suggests these potential conditions: {predictions_str}.
-ASSISTANT: Provide an empathetic, human-like paragraph. Start by acknowledging the user's symptoms using the exact terms provided. List the top predictions with their confidence scores. For each, suggest a relevant doctor or action (e.g., 'See a neurologist urgently' for Paralysis, 'Consult a general physician for Malaria', 'Visit an ENT specialist for Vertigo'). End with a mandatory disclaimer: 'This is not a medical diagnosis. Please consult a healthcare professional for accurate advice, especially if symptoms are severe or persistent. Seek help immediately if symptoms worsen tonight.'
+    You are an empathetic medical assistant.
+    The user described: {symptoms_str}.
+    Based on an ML model, the possible conditions are: {predictions_str}.
+    Write a clear, human-like paragraph that:
+      1. Acknowledges their symptoms.
+      2. Mentions each predicted condition with its confidence.
+      3. Suggests possible next steps (like consulting a specialist).
+      4. Ends with: "This is not a medical diagnosis. Please consult a healthcare professional for accurate advice."
+    
+    DO NOT use markdown formatting (no *, #, lists, or bold text).
+    You may use plain numbers (e.g., "1. Fever") if needed, but keep it plain text.
+
+    Return ONLY this JSON format:
+    {{
+      "humanized_response": "<your paragraph>"
+    }}
     """
+
     response_data = _stream_llm_response(prompt)
 
-    if not response_data or not isinstance(response_data, dict) or "humanized_response" not in response_data:
-        print(f"DEBUG: Invalid humanization response, falling back: {response_data}")
-        return "I'm sorry, I couldn't generate a detailed response. Please consult a healthcare professional for assistance with your symptoms."
+    if response_data and "humanized_response" in response_data:
+        clean_text = sanitize_text(response_data["humanized_response"])
+        return clean_text
 
-    return response_data.get("humanized_response", "Could not generate a response.")
+    print(f"DEBUG: Invalid Gemini response format: {response_data}")
+    return "I'm sorry, I couldn't generate a detailed response. Please consult a healthcare professional for assistance with your symptoms."
+
 
 def get_chat_response_with_llm(text: str):
     prompt = f"""
-    You are a helpful medical assistant. Answer the following question in a clear and concise way. Always include a disclaimer to consult a healthcare professional for medical advice.
+    You are a helpful medical assistant.
+    Answer the question clearly and in plain text.
+    DO NOT use markdown symbols or formatting like *, #, or code blocks.
+    Always include this disclaimer at the end: "Please consult a healthcare professional for medical advice."
+    Return ONLY a JSON object with the key "chat_response".
+
     Question: "{text}"
-    Return the response as a JSON object with a single key "chat_response".
     """
+
     response_data = _stream_llm_response(prompt)
-    return response_data.get("chat_response", "I am sorry, I cannot answer that question.") if response_data else "An error occurred while processing your request."
+    if response_data and "chat_response" in response_data:
+        return sanitize_text(response_data["chat_response"])
+    return "An error occurred while processing your question."

@@ -1,0 +1,21 @@
+.env
+test_gemini.py
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Test cache
+.pytest_cache/
+
+# Virtual environment (optional but recommended)
+venv/
+.env/
+
+# VS Code & IDE files
+.vscode/
+.idea/
+
+# Logs
+*.log

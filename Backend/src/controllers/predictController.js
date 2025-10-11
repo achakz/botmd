@@ -1,6 +1,7 @@
 //src/controllers/predictController.js
 const axios = require("axios");
 const History = require("../models/QueryHistory");
+require("dotenv").config();
 
 const predictDisease = async (req, res) => {
   const { message, mode } = req.body;
@@ -13,7 +14,9 @@ const predictDisease = async (req, res) => {
   }
 
   try {
-    const response = await axios.post("http://localhost:8000/chat", {
+    const fastapiURL = process.env.FASTAPI_URL || "http://localhost:8000";
+
+    const response = await axios.post(`${fastapiURL}/chat`, {
       mode,
       text: message,
     });
