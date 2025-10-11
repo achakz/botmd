@@ -4,7 +4,7 @@ BotMD is an **AI-powered chatbot** that supports two modes:
 
 - 🧪 **Prediction Mode** – Users enter their symptoms in natural language.
     
-    - Symptoms are extracted using an **LLM** (Llama 3.1 via Ollama).
+    - Symptoms are extracted using an **LLM**.
         
     - A trained **ML model** (Random Forest / XGBoost) predicts possible diseases.
         
@@ -25,13 +25,13 @@ BotMD is an **AI-powered chatbot** that supports two modes:
     
 - Disease prediction via **ML model** trained on symptom–disease dataset.
     
-- Humanized explanations with suggested doctor specialization via LLM.
+- Humanized explanations with suggested doctor specialization via **LLM**.
     
 - **Redis caching** to reduce repeated computation and improve latency.
     
 - Toggle between **Prediction Mode** and **Chat Mode** in the frontend.
     
-- Built with **MERN stack + FastAPI microservice**.
+- Built with **MERN stack + FastAPI microservice + Redis caching + Gemini API**.
     
 
 ---
@@ -42,8 +42,8 @@ BotMD is an **AI-powered chatbot** that supports two modes:
     
 - **Backend (Core API)**: Express.js, MongoDB, JWT Authentication
     
-- **Backend (AI Microservice)**: FastAPI, Scikit-learn, Joblib, Ollama (Llama 3.1)
+- **Backend (AI Microservice)**: FastAPI, Scikit-learn, Gemini API (gemini-2.0-flash-lite)
     
 - **Caching**: Redis
     
-- **Other Tools**: Docker (planned), Postman for API testing
+- **Other Tools**: Postman for API testing
