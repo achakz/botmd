@@ -23,7 +23,7 @@ const TechnologySection = () => {
         cursor: 'default',
     };
 
-    const techs = ['React', 'Node.js', 'FastAPI', 'MongoDB', 'Redis', 'Llama 3.1'];
+    const techs = ['React', 'Node.js', 'FastAPI', 'MongoDB', 'Redis', 'Gemini API'];
 
     return (
         <div style={sectionStyle}>
