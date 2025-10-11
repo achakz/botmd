@@ -1,3 +1,4 @@
+//src/components/ChatBot.jsx
 import React, { useState, useEffect, useRef } from "react";
 import {
   CssBaseline, Box, AppBar, Toolbar, Typography, Drawer, List, ListItem,
@@ -19,15 +20,19 @@ import {
   getMessagesBySession,
 } from "../services/api";
 import axios from "axios";
+import { Logout } from "@mui/icons-material";
+import { Delete } from "@mui/icons-material";
+import { deleteChatSession } from "../services/api";
+
 
 const drawerWidth = 280;
 
 const BotMDLogo = () => (
-    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 2L2 7V17L12 22L22 17V7L12 2Z" stroke="#38BDF8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M2 7L12 12L22 7" stroke="#38BDF8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M12 12V22" stroke="#38BDF8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12 2L2 7V17L12 22L22 17V7L12 2Z" stroke="#38BDF8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M2 7L12 12L22 7" stroke="#38BDF8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M12 12V22" stroke="#38BDF8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
 );
 
 const darkTheme = createTheme({
@@ -94,6 +99,7 @@ const ChatBot = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const messagesEndRef = useRef(null);
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -106,22 +112,42 @@ const ChatBot = () => {
 
   useEffect(() => {
     if (!user?.token) return;
+
+    let isMounted = true; // ✅ Prevents re-trigger from StrictMode
+    let hasInitialized = false;
+
     const init = async () => {
+      if (!isMounted || hasInitialized) return;
+      hasInitialized = true;
+
       try {
         const sessions = await getUserChatSessions(user.token);
         setChatSessions(sessions);
+
         if (sessions.length > 0) {
           const lastSession = sessions[0];
           await handleSessionClick(lastSession._id);
         } else {
-          await handleNewChat();
+          console.log("🟦 No sessions found, creating default one...");
+          const newSession = await createChatSession(user.token, "New Chat Session");
+          if (isMounted) {
+            setSessionId(newSession._id);
+            setMessages([]);
+            setChatSessions([newSession]);
+          }
         }
       } catch (error) {
         console.error("Initialization failed:", error);
       }
     };
+
     init();
+
+    return () => {
+      isMounted = false; // ✅ prevents duplicate firing when component unmounts/remounts
+    };
   }, [user?.token]);
+
 
   const handleSessionClick = async (id) => {
     setSessionId(id);
@@ -164,7 +190,11 @@ const ChatBot = () => {
   };
 
   const handleNewChat = async () => {
+    if (isCreatingSession) return;
+    setIsCreatingSession(true);
+
     try {
+      console.log("🟩 Creating a new chat session...");
       const newSession = await createChatSession(user.token, "New Chat Session");
       setSessionId(newSession._id);
       setMessages([]);
@@ -172,8 +202,34 @@ const ChatBot = () => {
       setChatSessions(sessions);
     } catch (error) {
       console.error("Failed to create new chat session:", error);
+    } finally {
+      setIsCreatingSession(false);
     }
   };
+
+  const handleDeleteSession = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this chat session?")) return;
+
+    try {
+      await deleteChatSession(user.token, id);
+      const updatedSessions = chatSessions.filter((s) => s._id !== id);
+      setChatSessions(updatedSessions);
+
+      if (sessionId === id) {
+        // if the deleted session was active, reset to first available or none
+        if (updatedSessions.length > 0) {
+          await handleSessionClick(updatedSessions[0]._id);
+        } else {
+          setSessionId(null);
+          setMessages([]);
+        }
+      }
+    } catch (error) {
+      console.error("Error deleting session:", error);
+      alert("Failed to delete chat session. Please try again.");
+    }
+  };
+
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -183,7 +239,7 @@ const ChatBot = () => {
   };
 
   const drawerContent = (
-    <Box sx={{ backgroundColor: '#0d1117', height: '100%'}}>
+    <Box sx={{ backgroundColor: '#0d1117', height: '100%' }}>
       <Toolbar sx={{ display: 'flex', justifyContent: 'center', p: 2, mb: 1 }}>
         <BotMDLogo />
         <Link component={RouterLink} to="/" sx={{ textDecoration: 'none', color: 'inherit' }}>
@@ -192,27 +248,52 @@ const ChatBot = () => {
           </Typography>
         </Link>
       </Toolbar>
-      <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.12)' }}/>
+      <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.12)' }} />
       <Box sx={{ p: 1 }}>
-        <ListItemButton onClick={handleNewChat} sx={{ borderRadius: '8px', m:1 }}>
+        <ListItemButton onClick={handleNewChat} sx={{ borderRadius: '8px', m: 1 }}>
           <ListItemIcon><AddCircleOutline /></ListItemIcon>
           <ListItemText primary="New Chat" />
         </ListItemButton>
-        <ListItemButton onClick={() => navigate("/history")} sx={{ borderRadius: '8px', m:1 }}>
+        <ListItemButton onClick={() => navigate("/history")} sx={{ borderRadius: '8px', m: 1 }}>
           <ListItemIcon><History /></ListItemIcon>
           <ListItemText primary="View History" />
+        </ListItemButton>
+        <ListItemButton
+          onClick={() => {
+            localStorage.removeItem("user"); // or call logout() from context
+            navigate("/login");
+            window.location.reload(); // optional clean refresh
+          }}
+          sx={{ borderRadius: '8px', m: 1 }}
+        >
+          <ListItemIcon><Logout /></ListItemIcon>
+          <ListItemText primary="Logout" />
         </ListItemButton>
       </Box>
       <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.12)' }} />
       <List sx={{ p: 1 }}>
         {chatSessions.map((session) => (
-          <ListItem key={session._id} disablePadding>
+          <ListItem key={session._id} disablePadding
+            secondaryAction={
+              <IconButton
+                edge="end"
+                aria-label="delete"
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation(); // prevent triggering session click
+                  handleDeleteSession(session._id);
+                }}
+              >
+                <Delete fontSize="small" />
+              </IconButton>
+            }
+          >
             <ListItemButton
               selected={sessionId === session._id}
               onClick={() => handleSessionClick(session._id)}
               sx={{ borderRadius: '8px', mb: 0.5 }}
             >
-              <ListItemIcon><ChatBubbleOutline fontSize="small"/></ListItemIcon>
+              <ListItemIcon><ChatBubbleOutline fontSize="small" /></ListItemIcon>
               <ListItemText
                 primary={session.title}
                 primaryTypographyProps={{ fontWeight: 500, noWrap: true }}
@@ -222,6 +303,7 @@ const ChatBot = () => {
           </ListItem>
         ))}
       </List>
+
     </Box>
   );
 
@@ -232,8 +314,8 @@ const ChatBot = () => {
         <AppBar
           position="fixed"
           elevation={0}
-          sx={{ 
-            width: `calc(100% - ${drawerWidth}px)`, 
+          sx={{
+            width: `calc(100% - ${drawerWidth}px)`,
             ml: `${drawerWidth}px`,
             background: 'linear-gradient(90deg, #161b22 0%, #0d1117 100%)',
             borderBottom: '1px solid',
@@ -269,7 +351,7 @@ const ChatBot = () => {
           </Box>
           <Paper
             elevation={0}
-            sx={{ 
+            sx={{
               p: 1, display: 'flex', alignItems: 'center', mt: 1,
               backgroundColor: '#161b22',
               border: '1px solid rgba(255, 255, 255, 0.12)',

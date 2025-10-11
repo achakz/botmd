@@ -1,5 +1,6 @@
 // src/controllers/chatSessionController.js
 const ChatSession = require("../models/ChatSession");
+const ChatMessage = require("../models/ChatMessage");
 
 const createSession = async (req, res) => {
   try {
@@ -23,7 +24,31 @@ const getUserSessions = async (req, res) => {
   }
 };
 
+const deleteSession = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    // Ensure the session belongs to the authenticated user
+    const session = await ChatSession.findOne({ _id: sessionId, userId: req.user.id });
+    if (!session) {
+      return res.status(404).json({ error: "Session not found or not authorized" });
+    }
+
+    // Delete all messages belonging to this session
+    await ChatMessage.deleteMany({ sessionId });
+
+    // Delete the session itself
+    await ChatSession.deleteOne({ _id: sessionId });
+
+    res.json({ message: "Session and associated messages deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting session:", err);
+    res.status(500).json({ error: "Error deleting session" });
+  }
+};
+
 module.exports = {
   createSession,
   getUserSessions,
+  deleteSession,
 };
