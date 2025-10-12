@@ -22,12 +22,14 @@ symptom_columns = joblib.load(symptom_path)
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 REDIS_DB = int(os.getenv("REDIS_DB", 0))
+REDIS_PW = os.getenv("REDIS_PW", None)
 
 redis_client = redis.Redis(
     host=REDIS_HOST,
     port=REDIS_PORT,
-    db=REDIS_DB,
-    decode_responses=True
+    decode_responses=True,
+    username="default",
+    password=REDIS_PW,
 )
 CACHE_TTL_SECONDS = 86400 * 7  # 7 days
 CACHE_VERSION = "v1"  # bump if schema/logic changes
